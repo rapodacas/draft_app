@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Softball Draft Board</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --panel-bg: #ffffff;
+      --border: #d0d0d0;
+      --text-main: #222222;
+      --text-muted: #666666;
+      --accent: #2b7cff;
+      --success: #28a745;
+      --reserve-bg: #fff4cc;
+      --reserve-border: #f0c040;
+      --pick-hover: #e8f0ff;
+      --header-bg: #333333;
+      --header-text: #ffffff;
+      --round-bg: #f0f0f0;
+      --danger: #d9534f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
+    .app-container {
+      display: grid;
+      grid-template-columns: 260px 1fr 260px;
+      grid-template-rows: auto 1fr;
+      gap: 12px;
+      padding: 12px;
+      height: 100vh;
+      max-height: 100vh;
+    }
+
+    .app-header {
+      grid-column: 1 / -1;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-header-logo {
+      height: 32px;
+      margin-right: 12px;
+    }
+
+    .app-header-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .app-header-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .btn-success {
+      border-color: var(--success);
+      background: var(--success);
+      color: #ffffff;
+    }
+
+    .btn-danger {
+      border-color: var(--danger);
+      background: var(--danger);
+      color: #ffffff;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .sidebar {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-section {
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+      margin-top: 4px;
+      font-size: 13px;
+    }
+
+    .sidebar-scroll {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 4px;
+    }
+
+    .sidebar-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .sidebar-value {
+      font-size: 13px;
+    }
+
+    .available-player {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .available-player:hover {
+      background: #f4f4f4;
+    }
+
+    .available-player-name {
+      font-weight: 500;
+    }
+
+    .available-player-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .draft-board {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .board-header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      display: grid;
+      grid-template-columns: 70px repeat(7, 1fr); /* 7 coaches */
+      font-size: 12px;
+      border-bottom: 1px solid #000000;
+    }
+
+    .board-header-cell {
+      padding: 6px 8px;
+      border-right: 1px solid #444444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .board-header-cell.round-col {
+      justify-content: flex-start;
+      font-weight: 600;
+    }
+
+    .board-body {
+      flex: 1;
+      overflow: auto;
+    }
+
+    .board-row {
+      display: grid;
+      grid-template-columns: 70px repeat(7, 1fr);
+      border-bottom: 1px solid var(--border);
+      min-height: 40px;
+      font-size: 12px;
+    }
+
+    .round-cell {
+      background: var(--round-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4px 6px;
+      font-weight: 500;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+
+    .pick-cell {
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 4px 6px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .pick-cell:hover {
+      background: var(--pick-hover);
+    }
+
+    .pick-cell.empty {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .pick-cell.reserve {
+      background: var(--reserve-bg);
+      border-top: 1px solid var(--reserve-border);
+      border-bottom: 1px solid var(--reserve-border);
+      cursor: default;
+    }
+
+    .pick-cell.reserve:hover {
+      background: var(--reserve-bg);
+    }
+
+    .pick-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 100%;
+    }
+
+    .pick-player-name {
+      font-weight: 500;
+      /* white-space: nowrap; */
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pick-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pick-label {
+      font-weight: 500;
+      font-size: 11px;
+      color: var(--accent);
+    }
+
+    .pick-number {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      border: 1px solid var(--border);
+    }
+
+    .swatch-reserve {
+      background: var(--reserve-bg);
+      border-color: var(--reserve-border);
+    }
+
+    .swatch-empty {
+      background: #ffffff;
+    }
+
+    .swatch-picked {
+      background: var(--pick-hover);
+    }
+
+    /* Simple responsive tweak */
+    @media (max-width: 1200px) {
+      .app-container {
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: auto 260px 1fr;
+      }
+
+      .sidebar-right {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+      }
+
+      .draft-board {
+        grid-column: 2 / 3;
+        grid-row: 2 / 4;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+        height: auto;
+        max-height: none;
+      }
+
+      .sidebar-left,
+      .sidebar-right,
+      .draft-board {
+        grid-column: 1 / -1;
+        height: auto;
+        min-height: 220px;
+      }
+    }
+
+    /* Documentation Modal — Compact Chat‑Style */
+
+    .docs-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .docs-modal {
+      background: #ffffff;
+      width: 680px;
+      max-height: 85vh;
+      border-radius: 8px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      overflow: hidden;
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    .docs-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+    }
+
+    .docs-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #222;
+    }
+
+    .docs-close-btn {
+      border: none;
+      background: transparent;
+      font-size: 18px;
+      cursor: pointer;
+      color: #666;
+      padding: 2px 6px;
+    }
+
+    .docs-close-btn:hover {
+      color: #000;
+    }
+
+    .docs-content {
+      padding: 14px 18px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #222;
+      white-space: normal;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* Markdown styling — compact */
+    .docs-content h1 {
+      font-size: 20px;
+      margin: 14px 0 6px;
+      font-weight: 700;
+    }
+
+    .docs-content h2 {
+      font-size: 17px;
+      margin: 12px 0 4px;
+      font-weight: 600;
+    }
+
+    .docs-content h3 {
+      font-size: 15px;
+      margin: 10px 0 4px;
+      font-weight: 600;
+    }
+
+    .docs-content p {
+      margin: 6px 0;
+    }
+
+    .docs-content ul {
+      margin: 4px 0 4px 18px;
+    }
+
+    .docs-content li {
+      margin: 2px 0;
+    }
+
+    .docs-content code {
+      background: #f2f2f2;
+      padding: 1px 3px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #tryoutFilters {
+      max-height: 80px;      /* adjust as needed */
+      overflow-y: auto;       /* enables vertical scrolling */
+      overflow-x: hidden;     /* prevents sideways scrollbars */
+      padding-right: 4px;     /* avoids scrollbar overlap */
+    }
+
+    /* Optional: nicer scrollbar */
+    #tryoutFilters::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #tryoutFilters::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    #tryoutFilters::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+  </style>
+</head>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<script src="firebase-sync.js"></script>
+
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <img class="app-header-logo" src="data:image/png;base64,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" alt="EGSL Logo">
+      <div class="app-header-title">EGSL<br> DraftBoard</div>
+      <div class="app-header-controls">
+        <!-- <div id="draftboardSaves" style="margin-top: 1rem;"> -->
+          <input class="btn" id="saveName" placeholder="DraftBoard Name" />
+          <button class="btn btn-primary" id="saveBoardBtn">Save Board</button>
+
+          <select id="savedBoards"></select>
+          <button class="btn btn-success" id="loadBoardBtn">Load Board</button>
+          <button class="btn btn-danger" id="deleteBoardBtn">Delete Board</button>
+        <!-- </div> -->
+        
+        <button class="btn" id="csvInputBtn">Import Players (CSV)</button>
+        <button class="btn">Export Results</button>
+        <button class="btn" id="undoBtn">Undo</button>
+        <button class="btn btn-danger" id="resetBoardBtn">Reset Draft</button>
+        <button class="btn" id="openDocsBtn">Documentation</button>
+      </div>
+    </header>
+
+    <!-- Left sidebar: available players / filters -->
+    <aside class="sidebar sidebar-left">
+
+      <div class="sidebar-header">Available Players</div>
+
+      <div class="sidebar-section">
+
+        <!-- 🔍 Search -->
+        <input id="playerSearch" class="input" placeholder="Search players..." />
+
+        <!-- 🧭 Position Filters -->
+        <div class="position-filters">
+          <button class="btn position-filter-btn" data-position="ALL">All</button>
+          <button class="btn position-filter-btn" data-position="P">P</button>
+          <button class="btn position-filter-btn" data-position="C">C</button>
+          <button class="btn position-filter-btn" data-position="IF">IF</button>
+          <button class="btn position-filter-btn" data-position="OF">OF</button>
+        </div>
+
+        <!-- 🧪 Tryout Filters (built dynamically) -->
+        <div id="tryoutFilters" class="tryout-filters"></div>
+
+        <!-- ↕ Sorting -->
+        <select id="playerSort" class="input">
+          <option value="rating">Rating</option>
+          <option value="hitting">Hitting</option>
+          <option value="fielding">Fielding</option>
+          <option value="intangibles">Intangibles</option>
+          <option value="name">Name</option>
+        </select>
+
+      </div>
+
+      <!-- 🧑‍🤝‍🧑 Player List -->
+      <div class="sidebar-section sidebar-scroll"></div>
+
+    </aside>
+
+    <!-- Draft board center -->
+    <main class="draft-board">
+      <div style="padding: 6px 8px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 13px; font-weight: 600;">Draft Board</div>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-swatch swatch-reserve"></div>
+            <span>Reserve pick</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch swatch-empty"></div>
+            <span>Available pick</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch swatch-picked"></div>
+            <span>Selected player (hover color)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column headers -->
+      <div class="board-header">
+        <div class="board-header-cell round-col">Round</div>
+        <div class="board-header-cell">Raoul</div>
+        <div class="board-header-cell">John</div>
+        <div class="board-header-cell">Jeff</div>
+        <div class="board-header-cell">Sebastian</div>
+        <div class="board-header-cell">Brian</div>
+        <div class="board-header-cell">Brandon</div>
+        <div class="board-header-cell">Stacy</div>
+      </div>
+
+      <!-- Board body: rows = rounds (example: 1–10 now; JS will generate later) -->
+      <div class="board-body">
+        <!-- Example Round 1 -->
+        <div class="board-row">
+          <div class="round-cell">Round 1</div>
+          <!-- Raoul pick (example: reserve) -->
+          <div class="pick-cell reserve">
+            <div class="pick-content">
+              <div class="pick-player-name">Player A</div>
+              <div class="pick-meta">
+                <span class="pick-label">Reserve</span>
+                <span>IF</span>
+                <span>Rating 9.2</span>
+              </div>
+            </div>
+            <div class="pick-number">1.01</div>
+          </div>
+          <!-- John -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.02</div>
+          </div>
+          <!-- Jeff -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.03</div>
+          </div>
+          <!-- Sebastian -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.04</div>
+          </div>
+          <!-- Brian -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.05</div>
+          </div>
+          <!-- Brandon -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.06</div>
+          </div>
+          <!-- Stacy -->
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">1.07</div>
+          </div>
+        </div>
+
+        <!-- Example Round 2 -->
+        <div class="board-row">
+          <div class="round-cell">Round 2</div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.01</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.02</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.03</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.04</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.05</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.06</div>
+          </div>
+          <div class="pick-cell empty">
+            <div class="pick-content">
+              <div class="pick-player-name">Click to draft</div>
+            </div>
+            <div class="pick-number">2.07</div>
+          </div>
+        </div>
+
+        <!-- More rounds will be generated dynamically later -->
+      </div>
+    </main>
+
+    <!-- Right sidebar: team summary / coach details -->
+    <aside class="sidebar sidebar-right">
+      <div class="sidebar-header">Coach Summary</div>
+      <button class="btn" id="setDraftOrderBtn">Set Draft Order</button>
+      <div>
+        <div class="sidebar-label">Selected Coach</div>
+        <select style="width: 100%; padding: 4px 6px; font-size: 13px;">
+          <option>Raoul</option>
+          <option>John</option>
+          <option>Jeff</option>
+          <option>Sebastian</option>
+          <option>Brian</option>
+          <option>Brandon</option>
+          <option>Stacy</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Team overview</div>
+        <div class="sidebar-value">Total players: 0</div>
+        <div class="sidebar-value">Average rating: —</div>
+        <div class="sidebar-value">Positions needed: P, C, IF, OF</div>
+      </div>
+
+      <div class="sidebar-section sidebar-scroll">
+        <div class="sidebar-label">Roster</div>
+        <!-- Drafted players for selected coach will appear here -->
+        <div class="sidebar-value" style="font-style: italic; color: var(--text-muted); margin-top: 4px;">
+          No players drafted yet.
+        </div>
+      </div>
+    </aside>
+  </div>
+  <div id="draftModal" style="
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  ">
+    <div style="
+      background: white;
+      width: 420px;
+      max-height: 80vh;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    ">
+      <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+        Select Player
+      </div>
+
+      <input id="draftSearch" type="text" placeholder="Search players..."
+        style="padding: 6px; margin-bottom: 8px; font-size: 14px;">
+
+      <div id="draftList" style="
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 6px;
+        flex: 1;
+      "></div>
+
+      <button id="draftCancel" class="btn" style="margin-top: 10px;">Cancel</button>
+    </div>
+  </div>
+  
+  <input type="file" id="csvInput" accept=".csv" style="display:none;">
+
+  <!-- ============================
+      COACH DRAFT ORDER MODAL
+  ============================= -->
+  <div id="orderModal" style="
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  ">
+    <div style="
+      background: white;
+      width: 360px;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    ">
+      <div style="font-size: 16px; font-weight: 600;">Set Draft Order</div>
+
+      <div id="orderList" style="
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 300px;
+        overflow-y: auto;
+      "></div>
+
+      <button class="btn" id="randomizeOrderBtn">Randomize Order</button>
+      <button class="btn btn-primary" id="applyOrderBtn">Apply Order</button>
+      <button class="btn" id="cancelOrderBtn">Cancel</button>
+    </div>
+  </div>
+
+  <div id="docsModal" class="docs-modal-overlay">
+    <div class="docs-modal">
+      <div class="docs-header">
+        <div class="docs-title">Draft Board Documentation</div>
+        <button class="docs-close-btn" id="closeDocsBtn">✕</button>
+      </div>
+      <div id="docsContent" class="docs-content">
+        <div>
+          <h1>🥎 Girls Softball Draft Board — Documentation</h1>
+
+          <hr>
+
+          <h2>📌 Overview</h2>
+          <p>
+            This application manages a complete, rules‑accurate, snake‑style draft for youth softball. It includes:
+          </p>
+          <ul>
+            <li>Player import from CSV</li>
+            <li>Automatic reserve classification and round assignment</li>
+            <li>Snake draft logic (1→7, then 7→1, etc.)</li>
+            <li>Turn enforcement (only the correct coach can draft)</li>
+            <li>Dynamic draft board rendering</li>
+            <li>Draft order customization (drag &amp; drop or randomize)</li>
+            <li>Player search, filtering, and modal‑based drafting</li>
+          </ul>
+          <p>
+            The system is designed to be <strong>transparent, fair, and coach‑friendly</strong>, with all league rules encoded directly into the engine.
+          </p>
+
+          <hr>
+
+          <h2>📥 CSV Import</h2>
+          <p>Your CSV must include the following fields:</p>
+          <ul>
+            <li><code>tryoutNumber</code></li>
+            <li><code>name</code></li>
+            <li><code>position</code></li>
+            <li><code>isReserve</code></li>
+            <li><code>ReserveCoach</code></li>
+            <li><code>isAllStarReturning</code></li>
+            <li><code>isAllStarMovingUp</code></li>
+            <li><code>IsTravelBallRecent</code></li>
+            <li><code>swing</code>, <code>contact</code>, <code>power</code></li>
+            <li><code>glove</code>, <code>arm</code>, <code>footwork</code></li>
+            <li><code>speed</code>, <code>hustle</code>, <code>coachability</code></li>
+          </ul>
+          <p>The app automatically computes:</p>
+          <ul>
+            <li><strong>Hitting</strong> = swing + contact + power</li>
+            <li><strong>Fielding</strong> = glove + arm + footwork</li>
+            <li><strong>Intangibles</strong> = speed + hustle + coachability</li>
+            <li><strong>Rating</strong> = (Hitting + Fielding + Intangibles) / 36</li>
+          </ul>
+          <p>These values are used for sorting and display only — the CSV remains clean and raw.</p>
+
+          <hr>
+
+          <h2>🧮 Reserve Classification Rules</h2>
+          <p>The app encodes the full league rules for reserve assignment.</p>
+
+          <h3>If a coach has <strong>one reserve</strong>:</h3>
+          <ul>
+            <li>Returning All‑Star → <strong>Round 1</strong></li>
+            <li>Moving‑Up All‑Star → <strong>Round 3</strong></li>
+            <li>Travel Ball (no division info) → <strong>Round 3</strong></li>
+            <li>Non‑All‑Star → <strong>Round 4</strong></li>
+          </ul>
+
+          <h3>If a coach has <strong>two reserves</strong>:</h3>
+          <ul>
+            <li>Two Returning → <strong>Rounds 1 &amp; 2</strong></li>
+            <li>Two Moving‑Up → <strong>Rounds 2 &amp; 3</strong></li>
+            <li>Returning + Moving‑Up → <strong>Rounds 1 &amp; 3</strong></li>
+            <li>Two Non‑All‑Stars → <strong>Both Round 4</strong></li>
+            <li>Mixed (All‑Star + Non‑All‑Star) → All‑Star gets <strong>1 or 3</strong>, Non‑All‑Star gets <strong>4</strong></li>
+          </ul>
+
+          <p>Reserves are:</p>
+          <ul>
+            <li>Automatically placed into the correct round</li>
+            <li>Locked (cannot be drafted over)</li>
+            <li>Highlighted visually</li>
+            <li>Counted in the snake pick order</li>
+          </ul>
+
+          <hr>
+
+          <h2>🔁 Snake Draft Logic</h2>
+          <p>The draft uses a <strong>true snake</strong>:</p>
+          <ul>
+            <li><strong>Round 1:</strong> Raoul → Stacy</li>
+            <li><strong>Round 2:</strong> Stacy → Raoul</li>
+            <li><strong>Round 3:</strong> Raoul → Stacy</li>
+            <li>…and so on</li>
+          </ul>
+          <p>Important:</p>
+          <ul>
+            <li><strong>Columns never move</strong> — coaches stay in the same left‑to‑right order</li>
+            <li>Only the <strong>pick order</strong> snakes</li>
+            <li>The system uses <code>currentPickIndex</code> plus mapping functions to determine the active cell</li>
+          </ul>
+          <p>This ensures the board is readable while still honoring the snake.</p>
+
+          <hr>
+
+          <h2>🖱 Drafting Players</h2>
+          <p>Click any available (non‑reserve) cell to open the <strong>Draft Modal</strong>.</p>
+          <p>Inside the modal you can:</p>
+          <ul>
+            <li>Search by name or tryout number</li>
+            <li>Scroll through all available players</li>
+            <li>View rating, position, and tryout number</li>
+            <li>Click a player to draft them</li>
+          </ul>
+          <p>After drafting:</p>
+          <ul>
+            <li>The cell locks</li>
+            <li>The turn advances</li>
+            <li>Available players update</li>
+            <li>Coach summaries update</li>
+          </ul>
+
+          <hr>
+
+          <h2>🔀 Draft Order Customization</h2>
+          <p>Open the <strong>Draft Order Modal</strong> to:</p>
+          <ul>
+            <li>Drag &amp; drop coaches into a new order</li>
+            <li>Randomize the order</li>
+            <li>Apply changes</li>
+          </ul>
+          <p>When you apply:</p>
+          <ul>
+            <li>The board rebuilds</li>
+            <li>Reserves re‑inject correctly</li>
+            <li>Turn order resets</li>
+            <li>The snake recalculates</li>
+          </ul>
+          <p>This allows leagues to set draft order on the fly.</p>
+
+          <hr>
+
+          <h2>🧩 Board Rendering</h2>
+          <p>The board is fully dynamic:</p>
+          <ul>
+            <li>10 rounds (configurable)</li>
+            <li>7 coaches (configurable)</li>
+            <li>Each cell stores:
+              <ul>
+                <li><code>round</code></li>
+                <li><code>column</code></li>
+                <li><code>coach</code></li>
+                <li><code>player</code></li>
+                <li><code>isLocked</code></li>
+                <li><code>isReserve</code></li>
+              </ul>
+            </li>
+          </ul>
+          <p>Pick numbers are displayed as:</p>
+          <pre><code>Round.Pick
+        </code></pre>
+          <p>Example: <strong>3.05</strong></p>
+
+          <hr>
+
+          <h2>🧹 Resetting the Draft</h2>
+          <p>The <strong>Reset Draft</strong> button:</p>
+          <ul>
+            <li>Clears all drafted players</li>
+            <li>Rebuilds the board</li>
+            <li>Reinjects reserves</li>
+            <li>Resets turn order</li>
+          </ul>
+          <p>This is useful for testing or re‑running the draft.</p>
+
+          <hr>
+
+          <h2>📤 Exporting Results</h2>
+          <p>
+            This feature is planned and ready for implementation.
+            The export will include:
+          </p>
+          <ul>
+            <li>Full draft board</li>
+            <li>Coach rosters</li>
+            <li>Ratings</li>
+            <li>Reserve indicators</li>
+          </ul>
+
+          <hr>
+
+          <h2>🛠 Architecture Summary</h2>
+
+          <h3>Core Functions</h3>
+          <ul>
+            <li><code>buildDraftBoard()</code></li>
+            <li><code>injectAllReserves()</code></li>
+            <li><code>classifyReserve()</code></li>
+            <li><code>getSnakeColumn()</code></li>
+            <li><code>getCurrentTurnCoach()</code></li>
+            <li><code>cellToGlobalPickIndex()</code></li>
+            <li><code>indexToCellCoords()</code></li>
+            <li><code>rebuildDraftBoard()</code></li>
+          </ul>
+
+          <h3>State Variables</h3>
+          <ul>
+            <li><code>allPlayers</code></li>
+            <li><code>nonReservePlayers</code></li>
+            <li><code>draftOrder</code></li>
+            <li><code>board</code></li>
+            <li><code>currentPickIndex</code></li>
+          </ul>
+
+          <hr>
+
+          <h2>🧪 Known Good Behaviors</h2>
+          <ul>
+            <li>Reserves always appear under the correct coach</li>
+            <li>Snake logic always matches the turn engine</li>
+            <li>Draft order changes rebuild the board correctly</li>
+            <li>No duplicate players</li>
+            <li>No skipped picks</li>
+            <li>No broken turn enforcement</li>
+          </ul>
+
+          <hr>
+
+          <h2>🧭 Future Enhancements</h2>
+          <ul>
+            <li>Export to CSV / PDF</li>
+            <li>Undo / redo</li>
+            <li>Coach roster summaries</li>
+            <li>Position balancing indicators</li>
+            <li>Mobile layout improvements</li>
+            <li>Dark mode</li>
+          </ul>
+
+          <hr>
+
+          <h2>🙌 Support</h2>
+          <p>If something looks off, check:</p>
+          <ul>
+            <li>CSV formatting</li>
+            <li><code>ReserveCoach</code> spelling</li>
+            <li>All‑Star flags</li>
+            <li>Draft order settings</li>
+          </ul>
+          <p>Happy drafting!</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ======================================================
+  // CONFIG & STATE
+  // ======================================================
+  const coaches = ["Raoul", "John", "Jeff", "Sebastian", "Brian", "Brandon", "Stacy"];
+  const TOTAL_ROUNDS = 10;
+  const POSITION_REQUIREMENTS = {
+    P: 2,
+    C: 2,
+    IF: 4,
+    OF: 3
+  };
+
+  let allPlayers = [];
+  let nonReservePlayers = [];
+  let currentPositionFilter = "ALL";
+  let currentTryoutFilter = "all"; // already exists
+  let currentSearchQuery = "";
+  let currentSortMode = "rating"; // default
+
+  let draftOrder = [...coaches]; // can be changed via modal
+  let board = [];                // 2D array: [roundIndex][colIndex] = cell
+  let currentPickIndex = 0;      // global pick counter across entire draft
+  let undoStack = [];
+
+  // ======================================================
+  // UTILS
+  // ======================================================
+  function normalizeYesNoFlag(value) {
+      if (value == null || value === "") return false;
+      const normalized = String(value).trim().toLowerCase();
+      return normalized === "yes" || normalized === "true" || normalized === "1";
+  }
+
+  // ======================================================
+  // CSV PARSER
+  // ======================================================
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+
+  const headers = lines[0].split(",").map(h => h.trim());
+  const players = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const rawLine = lines[i].trim();
+    if (!rawLine) continue;
+
+    const cols = rawLine.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+    const player = {};
+
+    headers.forEach((header, index) => {
+      player[header] = (cols[index] !== undefined ? cols[index].trim() : "");
+    });
+
+    // Normalize booleans
+    player.isAllStarReturning = normalizeYesNoFlag(player.isAllStarReturning || player.isAllStarReturningRaw);
+    player.isAllStarMovingUp  = normalizeYesNoFlag(player.isAllStarMovingUp  || player.isAllStarMovingUpRaw);
+    player.IsTravelBallRecent = normalizeYesNoFlag(player.IsTravelBallRecent || player.isTravelBallRecent);
+    player.isReserve          = normalizeYesNoFlag(player.isReserve);
+    player.reserveCoach       = player.ReserveCoach || player.reserveCoach || "";
+
+    // Tryout number (normalize to string)
+    player.tryoutNumber = String(player.tryoutNumber || player.TryoutNumber || "").trim();
+
+    // Skills
+    ["swing","contact","power","glove","arm","footwork","speed","hustle","coachability"].forEach(key => {
+      player[key] = Number(player[key]) || 0;
+    });
+
+    // Compute totals
+    player.Hitting      = player.swing + player.contact + player.power;
+    player.Fielding     = player.glove + player.arm + player.footwork;
+    player.Intangibles  = player.speed + player.hustle + player.coachability;
+    player.Rating       = (player.Hitting + player.Fielding + player.Intangibles) / 36;
+
+    // Fallbacks
+    player.name     = player.name || player.Name || "";
+
+    // Normalize position
+    player.position = (player.position || player.Position || "").trim().toUpperCase();
+
+    players.push(player);
+  }
+
+  return players;
+}
+
+
+  function getAgeEligibleDivision(player) {
+    const cutoff = new Date(`${player.seasonYear}-09-01`);
+    const birth = new Date(player.birthday);
+
+    const ageOnCutoff =
+      cutoff.getFullYear() -
+      birth.getFullYear() -
+      (cutoff < new Date(cutoff.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
+
+    if (ageOnCutoff <= 6)  return "6U";
+    if (ageOnCutoff <= 8)  return "8U";
+    if (ageOnCutoff <= 10) return "10U";
+    if (ageOnCutoff <= 12) return "12U";
+    return "14U";
+  }
+
+  // ======================================================
+  // RESERVE CLASSIFICATION (LEAGUE RULES)
+  // ======================================================
+  function getReserveType(player) {
+      const isAllStarClass =
+      player.isAllStarReturning ||
+      player.isAllStarMovingUp ||
+      player.IsTravelBallRecent;
+
+      if (!isAllStarClass) return "nonAllStar";
+
+      if (player.isAllStarReturning) return "returning";
+      if (player.isAllStarMovingUp)  return "movingUp";
+
+      // Travel ball only – infer
+      return player.playedDivisionLastYear === "yes" ? "returning" : "movingUp";
+  }
+
+  // Used in the snake-based injection (pair-aware)
+  function classifyReserve(player) {
+      // 🔥 COMMISSIONER OVERRIDE
+      if (player.overrideReserveRound) {
+        return { round: player.overrideReserveRound };
+      }
+
+      const isReturning = player.isAllStarReturning === true;
+      const isMovingUp  = player.isAllStarMovingUp === true;
+      const isTravel    = player.IsTravelBallRecent === true;
+
+      const isAllStar = isReturning || isMovingUp || isTravel;
+      const _otherReserve = player._otherReserve?.allPlayers.find((a)=>a.tryoutNumber==player._otherReserve.tryoutNumber)
+
+      if (!isAllStar) {
+      return { round: 4, secondaryRound: 4 };
+      }
+
+      if (isReturning && _otherReserve?.isAllStarReturning) {
+      return { round: 1, secondaryRound: 2 };
+      }
+
+      if (isReturning) {
+      return { round: 1 };
+      }
+
+      // // 🔥 NEW RULE HERE
+      // if (player.isReturningSecondYearInPlayedUpDivision) 
+      //   return { round: 2 };
+      
+      if (isMovingUp && _otherReserve?.isAllStarMovingUp) {
+      return { round: 2, secondaryRound: 3 };
+      }
+
+      if (isMovingUp) {
+      return { round: 3 };
+      }
+
+      if (isReturning && isMovingUp) {
+      return { round: 1, secondaryRound: 3 };
+      }
+
+      return { round: 4 };
+  }
+
+  // ======================================================
+  // BOARD BUILD (DATA STRUCTURE)
+  // ======================================================
+  function buildDraftBoard(draftOrder, totalRounds) {
+    const totalCoaches = draftOrder.length;
+    const newBoard = [];
+
+    for (let roundIndex = 0; roundIndex < totalRounds; roundIndex++) {
+      const row = [];
+
+      for (let col = 0; col < totalCoaches; col++) {
+        const coachName = draftOrder[col]; // NO snake here
+
+        row.push({
+          round:    roundIndex + 1,
+          column:   col + 1,
+          coach:    coachName,
+          player:   null,
+          isLocked: false,
+          isReserve: false
+        });
+      }
+
+      newBoard.push(row);
+    }
+
+    return newBoard;
+  }
+
+  // ======================================================
+  // SNAKE COLUMN HELPER (for reserve injection)
+  // ======================================================
+  function getSnakeColumn(roundIndex, coachIndex, totalCoaches) {
+      const isEvenRound = roundIndex % 2 === 1; // 0-based
+      return isEvenRound
+      ? (totalCoaches - 1 - coachIndex)
+      : coachIndex;
+  }
+
+  function injectAllReserves(board, players, draftOrder) {
+    const reservesByCoach = {};
+
+    players.forEach(p => {
+      const reserveCoach =
+        p.reserveCoach ||
+        p.ReserveCoach ||
+        ""; // be robust to header casing
+
+      if (p.isReserve && reserveCoach) {
+        if (!reservesByCoach[reserveCoach]) {
+          reservesByCoach[reserveCoach] = [];
+        }
+        reservesByCoach[reserveCoach].push(p);
+      }
+    });
+
+    // Pair reserves for rule logic
+    Object.values(reservesByCoach).forEach(list => {
+      if (list.length === 2) {
+        list[0]._otherReserveTryoutNumber = list[1].TryoutNumber;
+        list[1]._otherReserveTryoutNumber = list[0].TryoutNumber;
+      }
+    });
+
+    // Classify each reserve into a round (including secondaryRound)
+    Object.values(reservesByCoach).forEach(list => {
+      if (list.length === 2) {
+        const r1 = list[0];
+        const r2 = list[1];
+
+        const c1 = classifyReserve(r1);
+        const c2 = classifyReserve(r2);
+
+        // Case: both moving-up → 2nd and 3rd
+        if (c1.secondaryRound === 3 && c2.secondaryRound === 3) {
+          r1._reserveRound = 2;
+          r2._reserveRound = 3;
+          return;
+        }
+
+        // Case: both returning → 1st and 2nd
+        if (c1.secondaryRound === 2 && c2.secondaryRound === 2) {
+          r1._reserveRound = 1;
+          r2._reserveRound = 2;
+          return;
+        }
+
+        // Case: returning + moving-up → 1st and 3rd
+        if ((c1.round === 1 && c2.round === 3) ||
+            (c2.round === 1 && c1.round === 3)) {
+          r1._reserveRound = c1.round;
+          r2._reserveRound = c2.round;
+          return;
+        }
+
+        // Case: both non-All-Star → 4th and 4th (rank 3 & 4)
+        if (c1.round === 4 && c2.round === 4) {
+          r1._reserveRound = 4;
+          r2._reserveRound = 4;
+          return;
+        }
+      }
+
+      // Single reserve case
+      list.forEach(player => {
+        const { round } = classifyReserve(player);
+        player._reserveRound = round;
+      });
+    });
+
+    // Inject into the board WITHOUT extra snake logic
+    Object.entries(reservesByCoach).forEach(([coach, list]) => {
+      list.forEach(player => {
+        const roundIndex = (player._reserveRound || 1) - 1;
+        const row = board[roundIndex];
+        if (!row) return;
+
+        // Find the cell in that round that belongs to this coach
+        const cell = row.find(c => c.coach === coach);
+        if (!cell) return;
+
+        cell.player = player;
+        cell.isLocked = true;
+        cell.isReserve = true;
+      });
+    });
+  }
+
+  // ======================================================
+  // TURN ENGINE
+  // ======================================================
+  // function getCurrentTurnCoach(board, draftOrder, currentPickIndex) {
+  //     const totalCoaches = draftOrder.length;
+  //     const roundIndex   = Math.floor(currentPickIndex / totalCoaches);
+  //     const pickInRound  = currentPickIndex % totalCoaches;
+
+  //     const isEvenRound = roundIndex % 2 === 1;
+  //     const coachIndex  = isEvenRound
+  //     ? totalCoaches - 1 - pickInRound
+  //     : pickInRound;
+
+  //     return draftOrder[coachIndex];
+  // }
+
+  function getCurrentTurnCoach(board, draftOrder, currentPickIndex) {
+    const totalCoaches = draftOrder.length;
+
+    while (true) {
+      const roundIndex  = Math.floor(currentPickIndex / totalCoaches);
+      const pickInRound = currentPickIndex % totalCoaches;
+
+      const isEvenRound = roundIndex % 2 === 1;
+      const coachIndex  = isEvenRound
+        ? totalCoaches - 1 - pickInRound
+        : pickInRound;
+
+      const coach = draftOrder[coachIndex];
+      const cell  = board[roundIndex][coachIndex];
+
+      // If the cell is NOT locked, this coach gets the turn
+      if (!cell.isLocked) {
+        return coach;
+      }
+
+      // Otherwise skip to the next pick
+      currentPickIndex++;
+    }
+  }
+
+  // function advanceToNextPick() {
+  //     const totalCoaches = draftOrder.length;
+  //     const totalPicks   = totalCoaches * TOTAL_ROUNDS;
+
+  //     currentPickIndex++;
+
+  //     while (currentPickIndex < totalPicks) {
+  //     const roundIndex = Math.floor(currentPickIndex / totalCoaches);
+  //     const colIndex   = currentPickIndex % totalCoaches;
+  //     const cell       = board[roundIndex][colIndex];
+
+  //     if (!cell.isLocked && !cell.player) break;
+  //     currentPickIndex++;
+  //     }
+
+  //     renderBoard();
+  //     updateCoachSummary();
+  // }
+
+  // ======================================================
+  // BOARD RENDERING (DOM)
+  // ======================================================
+  function renderBoard() {
+    const body = document.querySelector(".board-body");
+    body.innerHTML = "";
+
+    if (!board.length) return;
+
+    const totalCoaches = draftOrder.length;
+
+    board.forEach((row, roundIndex) => {
+      const rowDiv = document.createElement("div");
+      rowDiv.className = "board-row";
+
+      const roundCell = document.createElement("div");
+      roundCell.className = "round-cell";
+      roundCell.textContent = `Round ${roundIndex + 1}`;
+      rowDiv.appendChild(roundCell);
+
+      row.forEach((cell, colIndex) => {
+        const td = document.createElement("div");
+        td.className = "pick-cell";
+        td.dataset.round = cell.round;
+        td.dataset.coach = cell.coach;
+
+        const globalPickIndex = cellToGlobalPickIndex(
+          roundIndex,
+          colIndex,
+          totalCoaches
+        );
+        td.dataset.pickIndex = globalPickIndex;
+
+        if (!cell.player && !cell.isReserve) {
+          td.classList.add("empty");
+        }
+        if (cell.isReserve) {
+          td.classList.add("reserve");
+        }
+
+        const content = document.createElement("div");
+        content.className = "pick-content";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "pick-player-name";
+
+        const metaEl = document.createElement("div");
+        metaEl.className = "pick-meta";
+
+        if (cell.player) {
+          const p = cell.player;
+          nameEl.textContent = `${p.name}`;
+          const bits = [];
+          if (cell.isReserve) bits.push("Reserve");
+          if (p.position) bits.push(p.position);
+          bits.push(`Rating ${(p.Rating * 100).toFixed(0)}%`);
+          metaEl.innerHTML = bits.map(b => `<span>${b}</span>`).join(" ");
+        } else {
+          nameEl.textContent = "Click to draft";
+        }
+
+        content.appendChild(nameEl);
+        content.appendChild(metaEl);
+        td.appendChild(content);
+
+        const pickNum = document.createElement("div");
+        pickNum.className = "pick-number";
+
+        const pickInRound = (globalPickIndex % totalCoaches) + 1;
+        pickNum.textContent = cell.player&&cell.player.tryoutNumber||''
+        
+        td.appendChild(pickNum);
+        
+        if (!cell.isLocked && !cell.player && globalPickIndex === currentPickIndex) {
+          td.style.outline = "2px solid var(--accent)";
+          td.style.outlineOffset = "-2px";
+        }
+
+        td.addEventListener("click", () => onCellClick(cell, td));
+        rowDiv.appendChild(td);
+      });
+
+      body.appendChild(rowDiv);
+    });
+
+    // update header titles
+    const headerCells = document.querySelectorAll(
+      ".board-header .board-header-cell:not(.round-col)"
+    );
+    headerCells.forEach((h, i) => {
+      h.textContent = draftOrder[i] || "";
+    });
+  }
+
+  function cellToGlobalPickIndex(roundIndex, colIndex, totalCoaches) {
+    const isEvenRound = roundIndex % 2 === 1;
+    const pickInRound = isEvenRound
+      ? (totalCoaches - 1 - colIndex)
+      : colIndex;
+    return roundIndex * totalCoaches + pickInRound;
+  }
+
+  function indexToCellCoords(globalIndex, totalCoaches) {
+    const roundIndex  = Math.floor(globalIndex / totalCoaches);
+    const pickInRound = globalIndex % totalCoaches;
+    const isEvenRound = roundIndex % 2 === 1;
+    const colIndex    = isEvenRound
+      ? (totalCoaches - 1 - pickInRound)
+      : pickInRound;
+    return { roundIndex, colIndex };
+  }
+
+  // ======================================================
+  // CLICK HANDLING (CELL -> MODAL)
+  // ======================================================
+  function onCellClick(cell, tdElement) {
+      if (cell.isLocked) return;
+
+      const currentCoach = getCurrentTurnCoach(board, draftOrder, currentPickIndex);
+
+      if (cell.coach !== currentCoach) {
+      alert(`It's ${currentCoach}'s turn`);
+      return;
+      }
+
+      openDraftModal(cell);
+  }
+
+  function finalizeDraftPick(cell, player) {
+      cell.player = player;
+      cell.isLocked = true;
+
+      renderBoard();
+      refreshAvailablePlayers();
+      renderCoachRoster();
+      updateCoachSummary();
+      advanceToNextPick();
+
+      undoStack.push({
+        board: structuredClone(board),
+        draftOrder: structuredClone(draftOrder),
+        currentPickIndex,
+        player: structuredClone(player)
+      });
+      updateUndoButton()
+  }
+
+  function undoLastPick() {
+    if (undoStack.length === 0) return;
+
+    const prev = undoStack.pop();
+
+    board = prev.board;
+    draftOrder = prev.draftOrder;
+    currentPickIndex = prev.currentPickIndex;
+    player = prev.player;
+
+    renderBoard();
+    updateUndoButton();
+  }
+  
+  function updateUndoButton() {
+    document.getElementById("undoBtn").disabled = undoStack.length === 0;
+  }
+
+  document.getElementById("undoBtn").addEventListener("click", undoLastPick);
+
+  function resetBoard() {
+    // Reset pick index
+    currentPickIndex = 0;
+
+    // Clear all drafted flags
+    allPlayers.forEach(p => {
+      p.drafted = false;
+      p.draftedBy = null;
+      p.draftRound = null;
+      p.draftPick = null;
+    });
+
+    // Rebuild a fresh empty board
+    // board = buildDraftBoard();   // your existing function
+
+    // Re-inject reserves using your existing logic
+    // injectAllReserves();          // this locks reserve picks again
+
+    // Re-render UI
+    rebuildDraftBoard();
+  }
+
+  document.getElementById("resetBoardBtn").addEventListener("click", resetBoard);
+
+  // ======================================================
+  // AVAILABLE PLAYERS & FILTERS
+  // ======================================================
+  function buildTryoutFilters(players) {
+      const container = document.getElementById("tryoutFilters");
+      container.innerHTML = "";
+
+      const numbers = [...new Set(players.map(p => p.tryoutNumber))]
+      .filter(n => n > 0)
+      .sort((a, b) => a - b);
+
+      const allBtn = createTryoutButton("All", "all");
+      container.appendChild(allBtn);
+
+      numbers.forEach(num => {
+      container.appendChild(createTryoutButton(String(num), num));
+      });
+  }
+
+  function createTryoutButton(label, value) {
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.style.fontSize = "11px";
+      btn.textContent = label;
+      btn.addEventListener("click", () => {
+      currentTryoutFilter = value;
+      refreshAvailablePlayers();
+      });
+      return btn;
+  }
+
+  function refreshAvailablePlayers() {
+    let list = [...nonReservePlayers];
+
+    // 1. Position filter
+    if (currentPositionFilter !== "ALL") {
+      list = list.filter(p => p.position === currentPositionFilter);
+    }
+
+    // 2. Tryout filter
+    if (currentTryoutFilter !== "all") {
+      list = list.filter(p => p.tryoutNumber === currentTryoutFilter);
+    }
+
+    // 3. Search filter
+    if (currentSearchQuery) {
+      list = list.filter(p =>
+        p.name.toLowerCase().includes(currentSearchQuery) ||
+        String(p.tryoutNumber).includes(currentSearchQuery)
+      );
+    }
+
+    // 4. Sorting
+    list.sort((a, b) => {
+      switch (currentSortMode) {
+        case "rating":
+          return b.Rating - a.Rating;
+        case "hitting":
+          return b.Hitting - a.Hitting;
+        case "fielding":
+          return b.Fielding - a.Fielding;
+        case "intangibles":
+          return b.Intangibles - a.Intangibles;
+        case "name":
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+
+    // 5. Render
+    renderAvailablePlayers(list);
+  }
+
+  function getDraftedIds() {
+      const ids = new Set();
+      board.forEach(row => {
+      row.forEach(cell => {
+          if (cell.player) {
+          ids.add(cell.player.tryoutNumber);
+          }
+      });
+      });
+      return ids;
+  }
+
+  function renderAvailablePlayers(playersList) {
+      const container = document.querySelector(".sidebar-left .sidebar-scroll");
+      container.innerHTML = "";
+
+      const draftedIds = getDraftedIds();
+      const available = playersList.filter(p => !draftedIds.has(p.tryoutNumber));
+
+      available.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "available-player";
+        div.innerHTML = `
+            <div>
+            <div class="available-player-name">${p.name}</div>
+            <div class="available-player-meta">
+                ${p.position || "—"} · Rating ${(p.Rating * 100).toFixed(0)}% · #${p.tryoutNumber}
+            </div>
+            </div>
+        `;
+        div.addEventListener("click", () => {
+            const fakeCell = getCurrentTurnCell();
+            if (!fakeCell) return;
+            openDraftModal(fakeCell.cell, p);
+        });
+        container.appendChild(div);
+      });
+  }
+
+  function getCurrentTurnCell() {
+    const totalCoaches = draftOrder.length;
+    const totalPicks   = totalCoaches * TOTAL_ROUNDS;
+    let idx = currentPickIndex;
+
+    while (idx < totalPicks) {
+      const { roundIndex, colIndex } = indexToCellCoords(idx, totalCoaches);
+      const cell = board[roundIndex][colIndex];
+      if (!cell.isLocked && !cell.player) {
+        return { cell, roundIndex, colIndex, pickIndex: idx };
+      }
+      idx++;
+    }
+    return null;
+  }
+
+  function advanceToNextPick() {
+    const totalCoaches = draftOrder.length;
+    const totalPicks   = totalCoaches * TOTAL_ROUNDS;
+
+    currentPickIndex++;
+
+    while (currentPickIndex < totalPicks) {
+      const { roundIndex, colIndex } = indexToCellCoords(
+        currentPickIndex,
+        totalCoaches
+      );
+      const cell = board[roundIndex][colIndex];
+      if (!cell.isLocked && !cell.player) break;
+      currentPickIndex++;
+    }
+
+    renderBoard();
+    updateCoachSummary();
+  }
+
+  document.getElementById("saveBoardBtn").addEventListener("click", () => {
+    const name = document.getElementById("saveName").value.trim();
+    if (!name) return;
+
+    const saves = getSavedBoards();
+
+    saves[name] = {
+      board: structuredClone(board),
+      players: structuredClone(allPlayers),
+      draftOrder: structuredClone(draftOrder),
+      currentPickIndex
+    };
+
+    saveBoards(saves);
+    refreshSavedBoardsUI();
+  });
+
+  document.body.addEventListener("click", e => {
+    if (e.target.id === "loadBoardBtn") {
+      const select = document.getElementById("savedBoards");
+      const name = select.value;
+      if (!name) return;
+
+      const saves = getSavedBoards();
+      const snap = saves[name];
+      if (!snap) return;
+
+      board = snap.board;
+      players = snap.players;
+      draftOrder = snap.draftOrder;
+      currentPickIndex = snap.currentPickIndex;
+
+      allPlayers        = players;
+      nonReservePlayers = players.filter(p => !p.isReserve);
+
+      buildTryoutFilters(nonReservePlayers);
+      renderBoard();
+    }
+  });
+
+  document.getElementById("deleteBoardBtn").addEventListener("click", () => {
+    const select = document.getElementById("savedBoards");
+    const name = select.value;
+    if (!name) return;
+
+    const saves = getSavedBoards();
+    delete saves[name];
+    saveBoards(saves);
+
+    refreshSavedBoardsUI();
+  });
+
+  function getSavedBoards() {
+    return JSON.parse(localStorage.getItem("draftboard_saves") || "{}");
+  }
+
+  function saveBoards(obj) {
+    localStorage.setItem("draftboard_saves", JSON.stringify(obj));
+  }
+
+  function refreshSavedBoardsUI() {
+    const select = document.getElementById("savedBoards");
+    const saves = getSavedBoards();
+
+    select.innerHTML = "";
+
+    Object.keys(saves).forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+
+  // ======================================================
+  // COACH SUMMARY (right sidebar – minimal)
+  // ======================================================
+  function updateCoachSummary() {
+      // you can expand this later; placeholder to keep things wired
+  }
+
+  // ======================================================
+  // DRAFT MODAL
+  // ======================================================
+  const draftModal     = document.getElementById("draftModal");
+  const draftListEl    = document.getElementById("draftList");
+  const draftSearchEl  = document.getElementById("draftSearch");
+  const draftCancelBtn = document.getElementById("draftCancel");
+
+  let modalTargetCell = null;
+
+  function openDraftModal(cell, preselectedPlayer = null) {
+      modalTargetCell = cell;
+      draftModal.style.display = "flex";
+      draftSearchEl.value = "";
+      renderDraftList(preselectedPlayer);
+  }
+
+  function closeDraftModal() {
+      draftModal.style.display = "none";
+      modalTargetCell = null;
+  }
+
+  function renderDraftList(preselectedPlayer) {
+      draftListEl.innerHTML = "";
+      const draftedIds = getDraftedIds();
+
+      let pool = allPlayers.filter(p => !p.isReserve && !draftedIds.has(p.tryoutNumber));
+
+      const q = draftSearchEl.value.trim().toLowerCase();
+      if (q) {
+      pool = pool.filter(p =>
+          (p.name || "").toLowerCase().includes(q) ||
+          String(p.tryoutNumber).includes(q)
+      );
+      }
+
+      pool.sort((a, b) => b.Rating - a.Rating);
+
+      pool.forEach(p => {
+      const row = document.createElement("div");
+      row.style.padding   = "4px 6px";
+      row.style.cursor    = "pointer";
+      row.style.fontSize  = "13px";
+      row.style.borderBottom = "1px solid #eee";
+
+      row.innerHTML = `
+          <div><strong>${p.name}</strong> (#${p.tryoutNumber})</div>
+          <div style="font-size:11px;color:#666;">
+          ${p.position || "—"} · Rating ${(p.Rating * 100).toFixed(0)}%
+          </div>
+      `;
+
+      row.addEventListener("click", () => {
+          if (!modalTargetCell) return;
+          finalizeDraftPick(modalTargetCell, p);
+          closeDraftModal();
+      });
+
+      draftListEl.appendChild(row);
+      });
+  }
+
+  draftSearchEl.addEventListener("input", () => {
+      renderDraftList();
+  });
+
+  draftCancelBtn.addEventListener("click", () => {
+      closeDraftModal();
+  });
+
+  // ======================================================
+  // REBUILD BOARD (AFTER IMPORT OR ORDER CHANGE)
+  // ======================================================
+  function rebuildDraftBoard() {
+      if (!allPlayers.length) return;
+      board = buildDraftBoard(draftOrder, TOTAL_ROUNDS);
+      injectAllReserves(board, allPlayers, draftOrder);
+      currentPickIndex = 0;
+
+      renderBoard();
+      refreshAvailablePlayers();
+      renderCoachRoster();
+      updateCoachSummary();
+  }
+
+  document.querySelectorAll(".position-filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentPositionFilter = btn.dataset.position; // "P", "C", "IF", "OF", "ALL"
+      refreshAvailablePlayers();
+    });
+  });
+
+  document.getElementById("playerSearch").addEventListener("input", (e) => {
+    currentSearchQuery = e.target.value.trim().toLowerCase();
+    refreshAvailablePlayers();
+  });
+
+  document.getElementById("playerSort").addEventListener("change", (e) => {
+    currentSortMode = e.target.value;
+    refreshAvailablePlayers();
+  });
+
+  // ======================================================
+  // CSV IMPORT UI
+  // ======================================================
+  const importBtn = document.getElementById('csvInputBtn');
+  const csvInput  = document.getElementById('csvInput');
+
+  importBtn.addEventListener('click', () => {
+      csvInput.click();
+  });
+
+  csvInput.addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text    = e.target.result;
+        const players = parseCSV(text);
+        handleImportedPlayers(players);
+      };
+      reader.readAsText(file);
+  });
+
+  function handleImportedPlayers(players) {
+      allPlayers        = players;
+      nonReservePlayers = players.filter(p => !p.isReserve);
+
+      buildTryoutFilters(nonReservePlayers);
+      rebuildDraftBoard();
+      // renderBoard();
+  }
+
+  // ======================================================
+  // DRAFT ORDER MODAL (BASIC)
+  // ======================================================
+  const orderModal       = document.getElementById("orderModal");
+  const orderListEl      = document.getElementById("orderList");
+  const setDraftOrderBtn = document.getElementById("setDraftOrderBtn");
+  const randomizeBtn     = document.getElementById("randomizeOrderBtn");
+  const applyOrderBtn    = document.getElementById("applyOrderBtn");
+  const cancelOrderBtn   = document.getElementById("cancelOrderBtn");
+
+  function openOrderModal() {
+      orderModal.style.display = "flex";
+      renderOrderList();
+  }
+
+  function closeOrderModal() {
+      orderModal.style.display = "none";
+  }
+
+  function renderOrderList() {
+    const container = document.getElementById("orderList");
+    container.innerHTML = "";
+
+    draftOrder.forEach((coach, index) => {
+      const item = document.createElement("div");
+      item.className = "order-item";
+      item.draggable = true;
+      item.dataset.index = index;
+
+      item.style.padding = "8px";
+      item.style.border = "1px solid #ccc";
+      item.style.borderRadius = "4px";
+      item.style.background = "#fafafa";
+      item.style.cursor = "grab";
+      item.style.display = "flex";
+      item.style.alignItems = "center";
+      item.style.gap = "8px";
+
+      item.innerHTML = `<strong>${index + 1}.</strong> ${coach}`;
+
+      addDragEvents(item);
+      container.appendChild(item);
+    });
+  }
+
+  let dragSrcEl = null;
+
+  function addDragEvents(item) {
+    item.addEventListener("dragstart", (e) => {
+      dragSrcEl = item;
+      e.dataTransfer.effectAllowed = "move";
+      item.style.opacity = "0.4";
+    });
+
+    item.addEventListener("dragend", () => {
+      item.style.opacity = "1";
+    });
+
+    item.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+
+    item.addEventListener("dragenter", () => {
+      item.style.background = "#e8f0ff";
+    });
+
+    item.addEventListener("dragleave", () => {
+      item.style.background = "#fafafa";
+    });
+
+    item.addEventListener("drop", () => {
+      if (dragSrcEl === item) return;
+
+      const container = document.getElementById("orderList");
+      const items = [...container.children];
+
+      const srcIndex = items.indexOf(dragSrcEl);
+      const destIndex = items.indexOf(item);
+
+      // Reorder draftOrder array
+      const moved = draftOrder.splice(srcIndex, 1)[0];
+      draftOrder.splice(destIndex, 0, moved);
+
+      renderOrderList();
+    });
+  }
+  document.getElementById("setDraftOrderBtn").addEventListener("click", () => {
+    renderOrderList();
+    document.getElementById("orderModal").style.display = "flex";
+  });
+
+  document.getElementById("cancelOrderBtn").addEventListener("click", () => {
+    document.getElementById("orderModal").style.display = "none";
+  });
+
+  document.getElementById("orderModal").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) {
+      document.getElementById("orderModal").style.display = "none";
+    }
+  });
+
+  setDraftOrderBtn.addEventListener("click", openOrderModal);
+  cancelOrderBtn.addEventListener("click", closeOrderModal);
+
+  randomizeBtn.addEventListener("click", () => {
+      draftOrder = [...draftOrder]
+      .map(v => ({ v, sort: Math.random() }))
+      .sort((a, b) => a.sort - b.sort)
+      .map(x => x.v);
+      renderOrderList();
+  });
+
+  applyOrderBtn.addEventListener("click", () => {
+      closeOrderModal();
+      rebuildDraftBoard();
+  });
+
+  // ======================================================
+  // INITIAL SETUP
+  // ======================================================
+  window.addEventListener("load", () => {
+      draftOrder = [...coaches];
+      renderBoard(); // empty board until CSV import
+      refreshSavedBoardsUI();
+  });
+
+
+  function getRosterForCoach(coachName) {
+    const roster = [];
+
+    board.forEach(row => {
+      row.forEach(cell => {
+        if (cell.coach === coachName && cell.player) {
+          roster.push(cell.player);
+        }
+      });
+    });
+
+    return roster;
+  }
+
+  function renderCoachRoster() {
+    const coach = document.querySelector(".sidebar-right select").value;
+    const roster = getRosterForCoach(coach);
+
+    const container = document.querySelector(".sidebar-right .sidebar-scroll");
+    container.innerHTML = "";
+
+    if (roster.length === 0) {
+      container.innerHTML = `
+        <div class="sidebar-value" style="font-style: italic; color: var(--text-muted); margin-top: 4px;">
+          No players drafted yet.
+        </div>
+      `;
+      return;
+    }
+
+    roster.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "sidebar-value";
+      div.style.padding = "4px 0";
+      div.innerHTML = `
+        <strong>${p.name}</strong> 
+        <span style="color: var(--text-muted); font-size: 12px;">
+          (${p.position || "—"}, Rating ${(p.Rating * 100).toFixed(0)}%)
+        </span>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  function updateCoachSummary() {
+    const coach = document.querySelector(".sidebar-right select").value;
+    const roster = getRosterForCoach(coach);
+
+    const totalPlayersEl = document.querySelector(".sidebar-right .sidebar-section .sidebar-value:nth-child(2)");
+    const avgRatingEl    = document.querySelector(".sidebar-right .sidebar-section .sidebar-value:nth-child(3)");
+    const positionsNeededEl = document.querySelector(".sidebar-right .sidebar-section .sidebar-value:nth-child(4)");
+
+    // Total players
+    totalPlayersEl.textContent = `Total players: ${roster.length}`;
+
+    // Average rating
+    if (roster.length > 0) {
+      const avg = roster.reduce((sum, p) => sum + p.Rating, 0) / roster.length;
+      avgRatingEl.textContent = `Average rating: ${(avg * 100).toFixed(1)}%`;
+    } else {
+      avgRatingEl.textContent = "Average rating: —";
+    }
+
+    // Positions needed
+    const needed = computePositionsNeeded(roster);
+    positionsNeededEl.textContent = `Positions needed: ${needed}`;
+  }
+
+  function computePositionsNeeded(roster) {
+    const counts = { P: 0, C: 0, IF: 0, OF: 0 };
+
+    roster.forEach(p => {
+      const pos = normalizePosition(p.position);
+      if (pos && counts[pos] !== undefined) {
+        counts[pos]++;
+      }
+    });
+
+    const needed = [];
+
+    for (const pos in POSITION_REQUIREMENTS) {
+      const required = POSITION_REQUIREMENTS[pos];
+      const have = counts[pos];
+      const missing = required - have;
+
+      if (missing > 0) {
+        needed.push(`${pos} (${missing})`);
+      }
+    }
+
+    return needed.length > 0 ? needed.join(", ") : "None";
+  }
+
+  function normalizePosition(pos) {
+    if (!pos) return null;
+    const p = pos.trim().toUpperCase();
+
+    if (["P"].includes(p)) return "P";
+    if (["C"].includes(p)) return "C";
+    if (["1B","2B","3B","SS","IF"].includes(p)) return "IF";
+    if (["LF","CF","RF","OF"].includes(p)) return "OF";
+
+    return null;
+  }
+
+  document.querySelector(".sidebar-right select").addEventListener("change", () => {
+    renderCoachRoster();
+    updateCoachSummary();
+  });
+
+  document.getElementById("openDocsBtn").addEventListener("click", () => {
+    const modal = document.getElementById("docsModal");
+    const content = document.getElementById("docsContent");
+    // content.textContent = DOCUMENTATION_MD;
+    modal.style.display = "flex";
+  });
+
+  document.getElementById("closeDocsBtn").addEventListener("click", () => {
+    document.getElementById("docsModal").style.display = "none";
+  });
+
+  document.getElementById("docsModal").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) {
+      document.getElementById("docsModal").style.display = "none";
+    }
+  });
+
+  </script>
+
+</body>
+</html>
