@@ -1063,6 +1063,29 @@
   </div>
 
   <script>
+
+  // globals
+  let isSpectatorMode = true;
+  let isHost = false;
+
+  // your chosen secret key
+  const HOST_KEY = "EGSL2025";  // change to whatever you want
+
+  // read query params
+  const params = new URLSearchParams(window.location.search);
+  const providedKey = params.get("host_key");
+
+  // determine mode
+  if (providedKey && providedKey === HOST_KEY) {
+    isHost = true;
+    isSpectatorMode = false;
+  } else {
+    isHost = false;
+    isSpectatorMode = true;
+  }
+
+  FirebaseSync.initFirebase(firebaseConfig, { host: isHost });
+
   // ======================================================
   // CONFIG & STATE
   // ======================================================
@@ -1547,6 +1570,7 @@ function parseCSV(text) {
   }
 
   function finalizeDraftPick(cell, player) {
+      if (isSpectatorMode) return;
       cell.player = player;
       cell.isLocked = true;
 
@@ -1555,7 +1579,12 @@ function parseCSV(text) {
       renderCoachRoster();
       updateCoachSummary();
       advanceToNextPick();
-
+      FirebaseSync.syncWrite({
+        board,
+        allPlayers,
+        draftOrder,
+        currentPickIndex
+      });
       undoStack.push({
         board: structuredClone(board),
         draftOrder: structuredClone(draftOrder),
@@ -1566,6 +1595,7 @@ function parseCSV(text) {
   }
 
   function undoLastPick() {
+    if (isSpectatorMode) return;
     if (undoStack.length === 0) return;
 
     const prev = undoStack.pop();
@@ -1577,6 +1607,12 @@ function parseCSV(text) {
 
     renderBoard();
     updateUndoButton();
+    FirebaseSync.syncWrite({ 
+      board,
+      allPlayers,
+      draftOrder,
+      currentPickIndex
+    });
   }
   
   function updateUndoButton() {
@@ -1586,6 +1622,7 @@ function parseCSV(text) {
   document.getElementById("undoBtn").addEventListener("click", undoLastPick);
 
   function resetBoard() {
+    if (isSpectatorMode) return;
     // Reset pick index
     currentPickIndex = 0;
 
@@ -1777,6 +1814,7 @@ function parseCSV(text) {
 
   document.body.addEventListener("click", e => {
     if (e.target.id === "loadBoardBtn") {
+      if (isSpectatorMode) return;
       const select = document.getElementById("savedBoards");
       const name = select.value;
       if (!name) return;
@@ -2090,6 +2128,15 @@ function parseCSV(text) {
       closeOrderModal();
       rebuildDraftBoard();
   });
+
+  function applyRemoteSnapshot(data) {
+    board = data.board;
+    allPlayers = data.allPlayers;
+    draftOrder = data.draftOrder;
+    currentPickIndex = data.currentPickIndex;
+
+    renderBoard(); // sidebar included
+  }
 
   // ======================================================
   // INITIAL SETUP
