@@ -2136,7 +2136,9 @@ function parseCSV(text) {
     currentPickIndex = data.currentPickIndex;
 
     renderBoard(); // sidebar included
-    refreshAvailablePlayers();
+    nonReservePlayers = allPlayers.filter(p => !p.isReserve);
+    buildTryoutFilters(nonReservePlayers);
+//    refreshAvailablePlayers();
   }
 
   // ======================================================
