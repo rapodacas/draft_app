@@ -5,28 +5,34 @@ const firebaseConfig = {
   storageBucket: "egsl-draftboard.firebasestorage.app",
   messagingSenderId: "94820544899",
   appId: "1:94820544899:web:7a6dc8a4452d56002086b6",
-  measurementId: "G-WRLT69YGSE"
+  measurementId: "G-WRLT69YGSE",
+  databaseURL: "https://egsl-draftboard-default-rtdb.firebaseio.com"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 // ---------------------------------------------------------
 // firebase-sync.js
 // Lightweight live-sync module for the EGSL Draft Board
 // ---------------------------------------------------------
 
+/* global firebase */
+
 // --- Firebase Initialization ---
 let firebaseApp = null;
 let firebaseDb  = null;
 
-let isHost = false;
-let isSpectatorMode = false;
 
 let lastRemoteTimestamp = 0;
 
-// Initialize Firebase (call this once from your main app)
+// ---------------------------------------------------------
+// Safe Firebase Initialization
+// ---------------------------------------------------------
 function initFirebase(config, { host = false } = {}) {
+  // Wait until Firebase compat scripts have loaded
+  if (!window.firebase || !firebase.initializeApp) {
+    setTimeout(() => initFirebase(config, { host }), 30);
+    return;
+  }
+
   isHost = host;
   isSpectatorMode = !host;
 
@@ -39,13 +45,24 @@ function initFirebase(config, { host = false } = {}) {
 }
 
 // ---------------------------------------------------------
+// Utility: Deep-clean snapshot (convert undefined → null)
+// ---------------------------------------------------------
+function cleanSnapshot(obj) {
+  return JSON.parse(
+    JSON.stringify(obj, (_, value) => (value === undefined ? null : value))
+  );
+}
+
+// ---------------------------------------------------------
 // Host: Push snapshot to Firebase
 // ---------------------------------------------------------
 function syncWrite(snapshot) {
   if (!isHost) return;
 
+  const cleaned = cleanSnapshot(snapshot);
+
   firebaseDb.ref("draftState").set({
-    ...snapshot,
+    ...cleaned,
     timestamp: Date.now()
   });
 }
@@ -63,26 +80,16 @@ function subscribeToRemoteUpdates() {
     if (data.timestamp <= lastRemoteTimestamp) return;
     lastRemoteTimestamp = data.timestamp;
 
-    // Apply snapshot to local app
     applyRemoteSnapshot(data);
   });
 }
 
 // ---------------------------------------------------------
 // Apply remote snapshot to the local app
-// (You define this in your main app)
+// (Your main app overrides this)
 // ---------------------------------------------------------
 function applyRemoteSnapshot(data) {
-  // Your main app will override this function.
-  // Example implementation in your main script:
-  //
-  // board = data.board;
-  // players = data.players;
-  // draftOrder = data.draftOrder;
-  // currentPickIndex = data.currentPickIndex;
-  //
-  // renderBoard();
-  // renderSidebar();
+  // Overridden in main app
 }
 
 // ---------------------------------------------------------
